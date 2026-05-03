@@ -1,41 +1,26 @@
 def detect_dark_patterns(text):
     patterns = {
-        "Urgency": {
-            "keywords": ["hurry", "limited time", "act now", "buy now", "offer ends soon"],
-            "weight": 15,
-            "explanation": "Creates pressure to act quickly without thinking."
-        },
-        "Scarcity": {
-            "keywords": ["only few left", "only 1 left", "last chance", "selling fast"],
-            "weight": 20,
-            "explanation": "Makes the product seem rare to push quick decisions."
-        },
-        "Pressure": {
-            "keywords": ["don't miss", "exclusive deal", "grab now", "best deal"],
-            "weight": 10,
-            "explanation": "Encourages emotional buying instead of logical thinking."
-        }
+        "Urgency": ["hurry", "limited time", "ending soon"],
+        "Scarcity": ["only few left", "only 1 left", "limited stock"],
+        "Pressure": ["buy now", "order now", "add to cart"],
+        "Social Proof": ["bought", "ratings", "reviews"],
+        "Discount": ["% off", "discount", "deal", "offer"]
     }
 
-    text = text.lower()
+    text_lower = text.lower()
     results = {}
-    total_score = 0
+    score = 0
 
-    for category, data in patterns.items():
-        matches = [word for word in data["keywords"] if word in text]
+    for category, keywords in patterns.items():
+        matches = [k for k in keywords if k in text_lower]
+
         if matches:
             results[category] = {
                 "matches": matches,
-                "explanation": data["explanation"]
+                "explanation": f"{category} pattern detected"
             }
-            total_score += len(matches) * data["weight"]
+            score += len(matches) * 10
 
-    return results, total_score
+    return results, score
 
-
-# TEST
-sample = "Hurry! Only 1 left. Limited time offer! Don't miss this deal!"
-result, score = detect_dark_patterns(sample)
-
-print("Results:", result)
-print("Score:", score)
+           
