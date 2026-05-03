@@ -2,7 +2,69 @@
 <html>
 <head>
     <title>Dark Pattern Detector</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto&display=swap" rel="stylesheet">
+
+    <!-- CSS Styling -->
+    <style>
+    body {
+        font-family: 'Roboto', sans-serif;
+        margin: 40px;
+        background: linear-gradient(to right, #eef2f3, #ffffff);
+    }
+
+    h2 {
+        font-family: 'Poppins', sans-serif;
+        font-size: 32px;
+        color: #2c3e50;
+    }
+
+    h3 {
+        font-family: 'Poppins', sans-serif;
+        color: #34495e;
+    }
+
+    textarea, input {
+        width: 60%;
+        padding: 12px;
+        margin: 10px 0;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+    }
+
+    button {
+        padding: 12px 25px;
+        background: linear-gradient(45deg, #007BFF, #00c6ff);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        opacity: 0.9;
+    }
+
+    .result-box {
+        background: white;
+        padding: 25px;
+        margin-top: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .score {
+        font-size: 20px;
+        font-weight: bold;
+        color: #e74c3c;
+    }
+    </style>
+
 </head>
+
 <body>
 
 <h2>Dark Pattern Detector</h2>
