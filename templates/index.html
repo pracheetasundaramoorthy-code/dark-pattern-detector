@@ -6,80 +6,80 @@
     <style>
         body {
             font-family: Arial;
-            background: #0f172a;
-            color: white;
-            text-align: center;
+            margin: 40px;
+            background-color: #f5f5f5;
         }
 
-        input {
+        h2 {
+            color: #333;
+        }
+
+        textarea, input {
             width: 60%;
             padding: 10px;
-            margin-top: 20px;
+            margin: 10px 0;
         }
 
         button {
             padding: 10px 20px;
-            margin: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
         }
 
-        .box {
-            margin-top: 20px;
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result-box {
+            background: white;
             padding: 20px;
-            background: #1e293b;
-            width: 70%;
-            margin: auto;
-            border-radius: 10px;
+            margin-top: 20px;
+            border-radius: 8px;
         }
 
-        .danger { color: red; }
-        .safe { color: lightgreen; }
+        .score {
+            font-size: 20px;
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
 
-<h1>🛑 Dark Pattern Detector</h1>
+<h2>🛒 Dark Pattern Detector</h2>
 
-<input type="text" id="url" placeholder="Enter product URL">
-<br>
-<button onclick="analyze()">Analyze</button>
+<form method="POST">
 
-<div class="box" id="result"></div>
+    <h3>Enter URL:</h3>
+    <input type="text" name="url" placeholder="https://example.com">
 
-<script>
-async function analyze() {
-    let url = document.getElementById("url").value;
+    <h3>OR Paste Text:</h3>
+    <textarea name="text" rows="6" placeholder="Paste shopping text here..."></textarea>
 
-    document.getElementById("result").innerHTML = "Analyzing...";
+    <br>
+    <button type="submit">Check</button>
+</form>
 
-    let res = await fetch("/analyze", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({url})
-    });
+<div class="result-box">
 
-    let data = await res.json();
+<h3>📊 Results:</h3>
 
-    if (data.status === "error") {
-        document.getElementById("result").innerHTML =
-            "<span class='danger'>" + data.message + "</span>";
-        return;
-    }
+{% for category, data in result.items() %}
+    <p><b>{{ category }}</b></p>
+    <p>Matched Words: {{ data.matches }}</p>
+    <p>Explanation: {{ data.explanation }}</p>
+    <hr>
+{% endfor %}
 
-    document.getElementById("result").innerHTML = `
-        <h2>Manipulation Score: ${data.score}/100</h2>
+<p class="score">Manipulation Score: {{ score }}</p>
+<p class="score">Risk Level: {{ risk }}</p>
 
-        <p><b>Detected Patterns:</b> ${data.patterns.join(", ") || "None"}</p>
+<h3>🔍 Highlighted Text:</h3>
+<p>{{ highlighted_text | safe }}</p>
 
-        <p><b>Keywords Found:</b> ${data.highlighted.join(", ") || "None"}</p>
-
-        <h3 class="${data.score > 50 ? 'danger' : 'safe'}">
-            ${data.score > 50 ? "⚠ High Risk Website" : "✔ Safe Website"}
-        </h3>
-    `;
-}
-</script>
+</div>
 
 </body>
 </html>
-
