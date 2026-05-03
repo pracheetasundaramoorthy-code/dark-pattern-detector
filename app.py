@@ -6,13 +6,17 @@ from bs4 import BeautifulSoup
 app = Flask(__name__)
 
 # Function to extract text from URL
-def extract_text_from_url(url):
-    try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return soup.get_text()
-    except:
-        return ""
+import re
+
+def highlight_text(text, results):
+    for category in results:
+        for word in results[category]["matches"]:
+            pattern = re.compile(re.escape(word), re.IGNORECASE)
+            text = pattern.sub(
+                f"<span style='color:red; font-weight:bold;'>{word}</span>",
+                text
+            )
+    return text
 
 @app.route("/", methods=["GET", "POST"])
 def home():
