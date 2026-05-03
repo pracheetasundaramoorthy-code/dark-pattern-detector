@@ -1,41 +1,73 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, render_template
+from detector import detect_dark_patterns
 import requests
 from bs4 import BeautifulSoup
-from detector import analyze_text
+import os
 
 app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-@app.route("/analyze", methods=["POST"])
-def analyze():
-    url = request.json["url"]
-
+# 🔹 Extract text from URL
+def extract_text_from_url(url):
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return soup.get_text()
+    except:
+        return ""
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        text = soup.get_text()
+# 🔹 Highlight detected words
+def highlight_text(text, results):
+    text_lower = text.lower()
 
-        result = analyze_text(text)
+    for category in results:
+        for word in results[category]["matches"]:
+            if word in text_lower:
+                text = text.replace(
+                    word,
+                    f"<span style='color:red; font-weight:bold;'>{word}</span>"
+                )
+    return text
 
-        return jsonify({
-            "status": "success",
-            "score": result["score"],
-            "patterns": result["detected_patterns"],
-            "highlighted": result["highlighted"]
-        })
+@app.route("/", methods=["GET", "POST"])
+def home():
+    result = {}
+    score = 0
+    risk = "Safe"
+    highlighted_text = ""
 
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        })
+    if request.method == "POST":
+        text = request.form.get("text")
+        url = request.form.get("url")
 
+        # If URL provided → extract text
+        if url:
+            text = extract_text_from_url(url)
+
+        if text:
+            result, score = detect_dark_patterns(text)
+
+            # Risk level
+            if score < 30:
+                risk = "Low"
+            elif score < 60:
+                risk = "Medium"
+            else:
+                risk = "High"
+
+            # Highlight words
+            highlighted_text = highlight_text(text, result)
+
+    return render_template(
+        "index.html",
+        result=result,
+        score=score,
+        risk=risk,
+        highlighted_text=highlighted_text
+    )
+
+# 🔥 IMPORTANT FOR RENDER DEPLOYMENT
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
-    
+
