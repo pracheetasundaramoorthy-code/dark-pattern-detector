@@ -7,50 +7,55 @@ import re
 
 app = Flask(__name__)
 
-# 🔹 Extract text from URL
+# 🔹 Extract text from URL (with headers to avoid blocking)
 def extract_text_from_url(url):
     try:
-        response = requests.get(url, timeout=5)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
 
-        # Remove scripts/styles
+        response = requests.get(url, headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            return "Unable to fetch content."
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # remove scripts/styles
         for tag in soup(["script", "style"]):
             tag.extract()
 
         text = ' '.join(soup.stripped_strings)
 
-        return text[:1500]  # limit size
+        return text[:2000]  # limit size
 
-    except:
-        return ""
+    except Exception as e:
+        print("URL Error:", e)
+        return "Unable to fetch content."
 
-# 🔹 Get only relevant sentences + highlight
+
+# 🔹 Extract relevant sentences + highlight
 def get_relevant_sentences(text, results):
-    try:
-        sentences = re.split(r'(?<=[.!?]) +', text)
-        relevant = []
+    sentences = re.split(r'(?<=[.!?]) +', text)
+    output = []
 
-        for sentence in sentences:
-            for category, data in results.items():
+    for sentence in sentences:
+        for category, data in results.items():
+            words = data.get("matches", [])
 
-                words = data["matches"] if isinstance(data, dict) else data
+            for word in words:
+                if word.lower() in sentence.lower():
 
-                for word in words:
-                    if word.lower() in sentence.lower():
+                    pattern = re.compile(re.escape(word), re.IGNORECASE)
+                    highlighted = pattern.sub(
+                        f"<span style='color:red; font-weight:bold;'>{word}</span>",
+                        sentence
+                    )
 
-                        pattern = re.compile(re.escape(word), re.IGNORECASE)
-                        highlighted = pattern.sub(
-                            f"<span style='color:red; font-weight:bold;'>{word}</span>",
-                            sentence
-                        )
+                    output.append(highlighted)
+                    break
 
-                        relevant.append(highlighted)
-                        break
-
-        return relevant
-
-    except:
-        return []
+    return output
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -64,21 +69,15 @@ def home():
         text = request.form.get("text", "")
         url = request.form.get("url", "")
 
-        # URL input
+        # 🔹 URL input
         if url.strip():
             text = extract_text_from_url(url)
 
-        if text.strip():
-            output = detect_dark_patterns(text)
+        # 🔹 ALWAYS run detection (even if text small)
+        if text:
+            result, score = detect_dark_patterns(text)
 
-            # Handle return
-            if isinstance(output, tuple):
-                result, score = output
-            else:
-                result = output
-                score = sum(len(v) for v in result.values()) * 10
-
-            # Risk level
+            # 🔹 risk level
             if score < 30:
                 risk = "Low"
             elif score < 60:
@@ -86,7 +85,7 @@ def home():
             else:
                 risk = "High"
 
-            # Get relevant sentences
+            # 🔹 relevant sentences
             highlighted_text = get_relevant_sentences(text, result)
 
     return render_template(
@@ -98,7 +97,7 @@ def home():
     )
 
 
-# 🔥 Render deployment
+# 🔥 REQUIRED FOR RENDER
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
