@@ -1,103 +1,74 @@
-from flask import Flask, request, render_template
-from detector import detect_dark_patterns
+from flask import Flask, request, jsonify, render_template
 import requests
 from bs4 import BeautifulSoup
-import os
-import re
 
 app = Flask(__name__)
 
-# 🔹 Extract text from URL (with headers to avoid blocking)
-def extract_text_from_url(url):
+# Simple dark pattern keywords (you can expand later)
+DARK_PATTERNS = {
+    "scarcity": ["only", "left in stock", "selling fast", "limited time"],
+    "urgency": ["hurry", "deal ends", "last chance", "today only"],
+    "hidden_costs": ["extra charges", "fees apply", "shipping not included"],
+    "forced_action": ["subscribe", "sign up required", "must create account"],
+    "misleading_discount": ["50% off*", "up to", "starting at"]
+}
+
+def analyze_text(text):
+    text_lower = text.lower()
+
+    detected = []
+    score = 0
+    highlighted = []
+
+    for pattern, keywords in DARK_PATTERNS.items():
+        for kw in keywords:
+            if kw in text_lower:
+                detected.append(pattern)
+                score += 20
+                highlighted.append(kw)
+
+    score = min(score, 100)
+
+    return {
+        "score": score,
+        "detected_patterns": list(set(detected)),
+        "highlighted_keywords": highlighted
+    }
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    data = request.json
+    url = data.get("url")
+
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
-
+        headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers, timeout=10)
-
-        if response.status_code != 200:
-            return "Unable to fetch content."
 
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # remove scripts/styles
-        for tag in soup(["script", "style"]):
-            tag.extract()
+        # extract visible text
+        text = soup.get_text(separator=" ")
 
-        text = ' '.join(soup.stripped_strings)
+        result = analyze_text(text)
 
-        return text[:2000]  # limit size
+        return jsonify({
+            "status": "success",
+            "url": url,
+            "manipulation_score": result["score"],
+            "detected_patterns": result["detected_patterns"],
+            "highlighted_text": result["highlighted_keywords"]
+        })
 
     except Exception as e:
-        print("URL Error:", e)
-        return "Unable to fetch content."
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
 
-
-# 🔹 Extract relevant sentences + highlight
-def get_relevant_sentences(text, results):
-    sentences = re.split(r'(?<=[.!?]) +', text)
-    output = []
-
-    for sentence in sentences:
-        for category, data in results.items():
-            words = data.get("matches", [])
-
-            for word in words:
-                if word.lower() in sentence.lower():
-
-                    pattern = re.compile(re.escape(word), re.IGNORECASE)
-                    highlighted = pattern.sub(
-                        f"<span style='color:red; font-weight:bold;'>{word}</span>",
-                        sentence
-                    )
-
-                    output.append(highlighted)
-                    break
-
-    return output
-
-
-@app.route("/", methods=["GET", "POST"])
-def home():
-    result = {}
-    score = 0
-    risk = "Low"
-    highlighted_text = []
-
-    if request.method == "POST":
-        text = request.form.get("text", "")
-        url = request.form.get("url", "")
-
-        # 🔹 URL input
-        if url.strip():
-            text = extract_text_from_url(url)
-
-        # 🔹 ALWAYS run detection (even if text small)
-        if text:
-            result, score = detect_dark_patterns(text)
-
-            # 🔹 risk level
-            if score < 30:
-                risk = "Low"
-            elif score < 60:
-                risk = "Medium"
-            else:
-                risk = "High"
-
-            # 🔹 relevant sentences
-            highlighted_text = get_relevant_sentences(text, result)
-
-    return render_template(
-        "index.html",
-        result=result,
-        score=score,
-        risk=risk,
-        highlighted_text=highlighted_text
-    )
-
-
-# 🔥 REQUIRED FOR RENDER
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
+
