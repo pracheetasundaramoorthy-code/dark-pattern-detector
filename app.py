@@ -19,35 +19,38 @@ def extract_text_from_url(url):
 
         text = ' '.join(soup.stripped_strings)
 
-        return text[:1000]  # limit text
+        return text[:1500]  # limit size
 
-    except Exception as e:
-        print("Error fetching URL:", e)
+    except:
         return ""
 
-# 🔹 Highlight text safely
-def highlight_text(text, results):
+# 🔹 Get only relevant sentences + highlight
+def get_relevant_sentences(text, results):
     try:
-        for category, data in results.items():
+        sentences = re.split(r'(?<=[.!?]) +', text)
+        relevant = []
 
-            # handle both formats
-            if isinstance(data, dict):
-                words = data.get("matches", [])
-            else:
-                words = data
+        for sentence in sentences:
+            for category, data in results.items():
 
-            for word in words:
-                pattern = re.compile(re.escape(word), re.IGNORECASE)
-                text = pattern.sub(
-                    f"<span style='color:red; font-weight:bold;'>{word}</span>",
-                    text
-                )
+                words = data["matches"] if isinstance(data, dict) else data
 
-        return text
+                for word in words:
+                    if word.lower() in sentence.lower():
 
-    except Exception as e:
-        print("Highlight error:", e)
-        return text
+                        pattern = re.compile(re.escape(word), re.IGNORECASE)
+                        highlighted = pattern.sub(
+                            f"<span style='color:red; font-weight:bold;'>{word}</span>",
+                            sentence
+                        )
+
+                        relevant.append(highlighted)
+                        break
+
+        return relevant
+
+    except:
+        return []
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -55,40 +58,36 @@ def home():
     result = {}
     score = 0
     risk = "Low"
-    highlighted_text = ""
+    highlighted_text = []
 
-    try:
-        if request.method == "POST":
-            text = request.form.get("text", "")
-            url = request.form.get("url", "")
+    if request.method == "POST":
+        text = request.form.get("text", "")
+        url = request.form.get("url", "")
 
-            # If URL is provided
-            if url.strip() != "":
-                text = extract_text_from_url(url)
+        # URL input
+        if url.strip():
+            text = extract_text_from_url(url)
 
-            if text.strip() != "":
-                output = detect_dark_patterns(text)
+        if text.strip():
+            output = detect_dark_patterns(text)
 
-                # handle return safely
-                if isinstance(output, tuple):
-                    result, score = output
-                else:
-                    result = output
-                    score = sum(len(v) for v in result.values()) * 10
+            # Handle return
+            if isinstance(output, tuple):
+                result, score = output
+            else:
+                result = output
+                score = sum(len(v) for v in result.values()) * 10
 
-                # risk level
-                if score < 30:
-                    risk = "Low"
-                elif score < 60:
-                    risk = "Medium"
-                else:
-                    risk = "High"
+            # Risk level
+            if score < 30:
+                risk = "Low"
+            elif score < 60:
+                risk = "Medium"
+            else:
+                risk = "High"
 
-                # highlight
-                highlighted_text = highlight_text(text, result)
-
-    except Exception as e:
-        print("Main error:", e)
+            # Get relevant sentences
+            highlighted_text = get_relevant_sentences(text, result)
 
     return render_template(
         "index.html",
@@ -99,7 +98,7 @@ def home():
     )
 
 
-# 🔥 REQUIRED FOR RENDER
+# 🔥 Render deployment
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
