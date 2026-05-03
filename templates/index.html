@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Dark Pattern Detector</title>
+
     <style>
         body {
             font-family: Arial;
@@ -19,7 +20,6 @@
         button {
             padding: 10px 20px;
             margin: 10px;
-            cursor: pointer;
         }
 
         .box {
@@ -27,18 +27,12 @@
             padding: 20px;
             background: #1e293b;
             width: 70%;
-            margin-left: auto;
-            margin-right: auto;
+            margin: auto;
             border-radius: 10px;
         }
 
-        .danger {
-            color: red;
-        }
-
-        .safe {
-            color: lightgreen;
-        }
+        .danger { color: red; }
+        .safe { color: lightgreen; }
     </style>
 </head>
 
@@ -54,17 +48,17 @@
 
 <script>
 async function analyze() {
-    const url = document.getElementById("url").value;
+    let url = document.getElementById("url").value;
 
     document.getElementById("result").innerHTML = "Analyzing...";
 
-    const res = await fetch("/analyze", {
+    let res = await fetch("/analyze", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({url})
     });
 
-    const data = await res.json();
+    let data = await res.json();
 
     if (data.status === "error") {
         document.getElementById("result").innerHTML =
@@ -73,17 +67,15 @@ async function analyze() {
     }
 
     document.getElementById("result").innerHTML = `
-        <h3>Manipulation Score: ${data.manipulation_score}/100</h3>
+        <h2>Manipulation Score: ${data.score}/100</h2>
 
-        <p><b>Detected Patterns:</b> ${data.detected_patterns.join(", ") || "None"}</p>
+        <p><b>Detected Patterns:</b> ${data.patterns.join(", ") || "None"}</p>
 
-        <p><b>Highlighted Keywords:</b> ${data.highlighted_text.join(", ") || "None"}</p>
+        <p><b>Keywords Found:</b> ${data.highlighted.join(", ") || "None"}</p>
 
-        <p class="${data.manipulation_score > 50 ? 'danger' : 'safe'}">
-            ${data.manipulation_score > 50 
-                ? "⚠ High risk of dark patterns detected!" 
-                : "✔ Low risk website"}
-        </p>
+        <h3 class="${data.score > 50 ? 'danger' : 'safe'}">
+            ${data.score > 50 ? "⚠ High Risk Website" : "✔ Safe Website"}
+        </h3>
     `;
 }
 </script>
