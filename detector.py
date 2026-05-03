@@ -1,26 +1,29 @@
-def detect_dark_patterns(text):
-    patterns = {
-        "Urgency": ["hurry", "limited time", "ending soon"],
-        "Scarcity": ["only few left", "only 1 left", "limited stock"],
-        "Pressure": ["buy now", "order now", "add to cart"],
-        "Social Proof": ["bought", "ratings", "reviews"],
-        "Discount": ["% off", "discount", "deal", "offer"]
-    }
+DARK_PATTERNS = {
+    "scarcity": ["only", "left in stock", "selling fast", "limited time"],
+    "urgency": ["hurry", "deal ends", "last chance", "today only"],
+    "hidden_costs": ["extra charges", "fees apply", "shipping not included"],
+    "forced_action": ["subscribe", "sign up required", "must create account"],
+    "misleading_discount": ["50% off", "up to", "starting at"]
+}
 
-    text_lower = text.lower()
-    results = {}
+def analyze_text(text):
+    text = text.lower()
+
+    detected = []
+    highlighted = []
     score = 0
 
-    for category, keywords in patterns.items():
-        matches = [k for k in keywords if k in text_lower]
+    for pattern, keywords in DARK_PATTERNS.items():
+        for kw in keywords:
+            if kw in text:
+                detected.append(pattern)
+                highlighted.append(kw)
+                score += 20
 
-        if matches:
-            results[category] = {
-                "matches": matches,
-                "explanation": f"{category} pattern detected"
-            }
-            score += len(matches) * 10
+    score = min(score, 100)
 
-    return results, score
-
-           
+    return {
+        "score": score,
+        "detected_patterns": list(set(detected)),
+        "highlighted": highlighted
+    }
