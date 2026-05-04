@@ -1,73 +1,54 @@
-from flask import Flask, request, render_template
-from detector import detect_dark_patterns
+from flask import Flask, render_template, request
 import requests
 from bs4 import BeautifulSoup
-import os
+from detector import detect_dark_patterns
 
 app = Flask(__name__)
 
-# 🔹 Extract text from URL
-def extract_text_from_url(url):
-    try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return soup.get_text()
-    except:
-        return ""
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    result = None
 
-# 🔹 Highlight detected words
-def highlight_text(text, results):
-    text_lower = text.lower()
+    if request.method == 'POST':
+        url = request.form.get('url')
 
-    for category in results:
-        for word in results[category]["matches"]:
-            if word in text_lower:
-                text = text.replace(
-                    word,
-                    f"<span style='color:red; font-weight:bold;'>{word}</span>"
-                )
-    return text
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0"
+            }
 
-@app.route("/", methods=["GET", "POST"])
-def home():
-    result = {}
-    score = 0
-    risk = "Safe"
-    highlighted_text = ""
+            response = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-    if request.method == "POST":
-        text = request.form.get("text")
-        url = request.form.get("url")
+            # Extract visible text
+            text = soup.get_text(separator=' ')
 
-        # If URL provided → extract text
-        if url:
-            text = extract_text_from_url(url)
+            # Detect dark patterns
+            score, patterns = detect_dark_patterns(text)
 
-        if text:
-            result, score = detect_dark_patterns(text)
-
-            # Risk level
-            if score < 30:
-                risk = "Low"
-            elif score < 60:
-                risk = "Medium"
+            # Message based on score
+            if score > 70:
+                message = "⚠️ Highly Manipulative Website"
+            elif score > 30:
+                message = "⚠️ Suspicious Website"
             else:
-                risk = "High"
+                message = "✅ Seems Safe"
 
-            # Highlight words
-            highlighted_text = highlight_text(text, result)
+            result = {
+                "score": score,
+                "patterns": patterns,
+                "message": message
+            }
 
-    return render_template(
-        "index.html",
-        result=result,
-        score=score,
-        risk=risk,
-        highlighted_text=highlighted_text
-    )
+        except Exception as e:
+            result = {
+                "error": "Unable to fetch or analyze the URL"
+            }
 
-# 🔥 IMPORTANT FOR RENDER DEPLOYMENT
+    return render_template('index.html', result=result)
+
+
+# IMPORTANT: Required for deployment
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
+    app.run()
 
