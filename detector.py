@@ -1,5 +1,3 @@
-import re
-
 def detect_dark_patterns(text):
     score = 0
     patterns = []
@@ -16,10 +14,9 @@ def detect_dark_patterns(text):
     for category, words in keywords.items():
         for word in words:
             if word in text_lower:
-                score += 10
+                score += 15
                 patterns.append((word, category))
 
     score = min(score, 100)
 
     return score, patterns
-
