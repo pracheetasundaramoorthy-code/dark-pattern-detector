@@ -2,108 +2,28 @@
 <html>
 <head>
     <title>Dark Pattern Detector</title>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto&display=swap" rel="stylesheet">
-
-    <!-- CSS Styling -->
-    <style>
-    body {
-        font-family: 'Roboto', sans-serif;
-        margin: 40px;
-        background: linear-gradient(to right, #eef2f3, #ffffff);
-    }
-
-    h2 {
-        font-family: 'Poppins', sans-serif;
-        font-size: 32px;
-        color: #2c3e50;
-    }
-
-    h3 {
-        font-family: 'Poppins', sans-serif;
-        color: #34495e;
-    }
-
-    textarea, input {
-        width: 60%;
-        padding: 12px;
-        margin: 10px 0;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        font-size: 14px;
-    }
-
-    button {
-        padding: 12px 25px;
-        background: linear-gradient(45deg, #007BFF, #00c6ff);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        cursor: pointer;
-    }
-
-    button:hover {
-        opacity: 0.9;
-    }
-
-    .result-box {
-        background: white;
-        padding: 25px;
-        margin-top: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    .score {
-        font-size: 20px;
-        font-weight: bold;
-        color: #e74c3c;
-    }
-    </style>
-
 </head>
-
 <body>
-
-<div class="container">
-
-    <h2>🛒 Dark Pattern Detector</h2>
+    <h1>Dark Pattern Detector</h1>
 
     <form method="POST">
-
-        <h3>Enter URL:</h3>
-        <input type="text" name="url" placeholder="https://example.com">
-
-        <h3>OR Paste Text:</h3>
-        <textarea name="text" rows="6" placeholder="Paste shopping text here..."></textarea>
-
-        <br>
-        <button type="submit">Check</button>
+        <input type="text" name="url" placeholder="Enter product URL" required>
+        <button type="submit">Analyze</button>
     </form>
 
-    <div class="result-box">
+    {% if result %}
+        {% if result.error %}
+            <p>{{ result.error }}</p>
+        {% else %}
+            <h2>Manipulation Score: {{ result.score }}</h2>
 
-        <h3>📊 Results:</h3>
-
-        {% for category, data in result.items() %}
-            <p><b>{{ category }}</b></p>
-            <p>Matched Words: {{ data.matches }}</p>
-            <p>Explanation: {{ data.explanation }}</p>
-            <hr>
-        {% endfor %}
-
-        <p class="score">Manipulation Score: {{ score }}</p>
-        <p class="score">Risk Level: {{ risk }}</p>
-
-        <h3>🔍 Highlighted Text:</h3>
-        <p>{{ highlighted_text | safe }}</p>
-
-    </div>
-
-</div>
-
+            <h3>Detected Patterns:</h3>
+            <ul>
+                {% for word, category in result.patterns %}
+                    <li><b>{{ word }}</b> → {{ category }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endif %}
 </body>
-
 </html>
