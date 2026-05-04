@@ -13,42 +13,52 @@ def index():
         url = request.form.get('url')
 
         try:
+            # Headers to avoid blocking by websites
             headers = {
-                "User-Agent": "Mozilla/5.0"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
             }
 
+            # Fetch webpage
             response = requests.get(url, headers=headers, timeout=10)
+
+            # Parse HTML
             soup = BeautifulSoup(response.text, 'html.parser')
 
             # Extract visible text
-            text = soup.get_text(separator=' ')
+            text = soup.get_text(separator=' ', strip=True)
 
             # Detect dark patterns
             score, patterns = detect_dark_patterns(text)
 
-            # Message based on score
+            # Generate message based on score
             if score > 70:
-                message = "⚠️ Highly Manipulative Website"
+                message = "⚠️ Highly Manipulative: Uses urgency, pressure, or misleading tactics."
             elif score > 30:
-                message = "⚠️ Suspicious Website"
+                message = "⚠️ Suspicious: Some dark patterns detected."
             else:
-                message = "✅ Seems Safe"
+                message = "✅ Safe: No strong manipulation detected."
 
+            # Prepare result
             result = {
                 "score": score,
                 "patterns": patterns,
                 "message": message
             }
 
+        except requests.exceptions.RequestException:
+            result = {
+                "error": "❌ Unable to fetch the website. It may block scraping or the URL is invalid."
+            }
+
         except Exception as e:
             result = {
-                "error": "Unable to fetch or analyze the URL"
+                "error": "❌ Something went wrong while analyzing the page."
             }
 
     return render_template('index.html', result=result)
 
 
-# IMPORTANT: Required for deployment
+# REQUIRED for deployment (Render / production)
 if __name__ == "__main__":
     app.run()
 
