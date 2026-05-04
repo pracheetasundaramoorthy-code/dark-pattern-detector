@@ -1,22 +1,28 @@
+import re
+
 def detect_dark_patterns(text):
     score = 0
     patterns = []
+    highlights = []
 
-    keywords = {
-        "False Urgency": ["only", "hurry", "limited", "last chance"],
-        "Scarcity": ["only 1 left", "few left", "selling fast"],
-        "Pressure": ["buy now", "act now", "don't miss"],
-        "Misleading Discount": ["% off", "deal", "offer ends"]
-    }
+    text = text.lower()
 
-    text_lower = text.lower()
+    urgency_patterns = ["only \\d+ left", "hurry", "limited time", "last chance"]
+    confirm_patterns = ["no thanks", "i don't want", "skip and lose"]
 
-    for category, words in keywords.items():
-        for word in words:
-            if word in text_lower:
-                score += 15
-                patterns.append((word, category))
+    # Urgency detection
+    for pattern in urgency_patterns:
+        matches = re.findall(pattern, text)
+        for m in matches:
+            score += 10
+            patterns.append("Fake urgency detected")
+            highlights.append(m)
 
-    score = min(score, 100)
+    # Confirm shaming
+    for phrase in confirm_patterns:
+        if phrase in text:
+            score += 15
+            patterns.append("Confirm shaming detected")
+            highlights.append(phrase)
 
-    return score, patterns
+    return score, patterns, highlights
